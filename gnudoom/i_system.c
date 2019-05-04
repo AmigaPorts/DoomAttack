@@ -95,6 +95,7 @@ BOOL InputHandlerON;
 #include "v_video.h"
 #include "w_wad.h"
 
+#include "c2p.h"
 #include "amiga.h"
 
 #ifdef __GNUG__
@@ -117,7 +118,7 @@ int joy_pad;
 int joy_port;
 int cputype;
 
-struct c2pfile *C2P = NULL;
+struct C2PFile *C2P = NULL;
 BPTR C2PFile = 0;
 BOOL DoC2P = FALSE;
 BOOL DoDoubleBuffer = TRUE;
@@ -168,7 +169,7 @@ void GetC2P(void)
         C2P = NULL;
         C2PFile = LoadSeg(routine);  // FIXME: where's the UnloadSeg for that?
         if (C2PFile) {
-            C2P = (struct c2pfile *)BADDR(C2PFile);
+            C2P = (struct C2PFile *)BADDR(C2PFile);
             while (C2P) {
                 memcpy(id, C2P->id, 4);
                 id[4] = '\0';
@@ -198,8 +199,8 @@ void GetC2P(void)
                         if (C2P->InitChunky2Planar(REALSCREENWIDTH, REALSCREENHEIGHT,
                                                    REALSCREENWIDTH * REALSCREENHEIGHT / 8, &init)) {
                             DoC2P = TRUE;
-                            if (!(C2P->Flags & C2PF_NODOUBLEBUFFER) && !M_CheckParm("-nodoublebuffer")) {
-                                DoDoubleBuffer = TRUE;
+                            if ((C2P->Flags & C2PF_NODOUBLEBUFFER) || M_CheckParm("-nodoublebuffer")) {
+                                DoDoubleBuffer = FALSE;
                             }
                         } else {
                             DoGraffiti = FALSE;
@@ -212,7 +213,7 @@ void GetC2P(void)
                     }
                     break;
                 }
-                C2P = C2P->NextSeg;
+                C2P = BADDR(C2P->NextSeg);
             }
             if (!C2P || !DoC2P) {
                 fprintf(stderr, "I_Init: The selected C2P file is not compatible.\n");
@@ -403,9 +404,9 @@ void I_Init(void)
         }
     }
 
+    I_InitGraphics();
     I_InitSound();
     I_InitLocale();
-    /*  I_InitGraphics();*/
 }
 
 void I_QuitAmiga(void)

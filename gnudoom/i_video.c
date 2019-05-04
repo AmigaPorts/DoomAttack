@@ -539,9 +539,11 @@ void I_ShutdownGraphics(void)
         I_FreeAllocedPens();
         FreeVec(ObtainTable);
     }
-
-    if (Blitting && DoDoubleBuffer)
-        Wait(SIGBREAKF_CTRL_F);
+    // Wait for the last blit+flip to finish
+    if (Blitting) {
+        Wait(DoomMask);
+        Blitting = FALSE;
+    }
 
     if (FlipTask) {
         SetSignal(0, SIGBREAKF_CTRL_E);
@@ -1011,11 +1013,11 @@ void I_FinishUpdate(void)
     if (DoFPS && DoBlitToScreen)
         ShowFPS();
 
+    if (Blitting) {
+        Wait(DoomMask);
+        Blitting = FALSE;
+    }
     if (DoDoubleBuffer) {
-        if (Blitting) {
-            Wait(DoomMask);
-            Blitting = FALSE;
-        }
         Wait(SIGBREAKF_CTRL_F);
     }
 
@@ -1625,7 +1627,7 @@ static void ScreenFlipper(void)
                 if (ChangeScreenBuffer(screen, screenbuffer1)) {
                     Video_Safe = FALSE;
                     Video_Display = FALSE;
-                };
+                }
             } else {
                 renderrastport.BitMap = &bitmap1;
                 viewrastport.BitMap = &bitmap2;
